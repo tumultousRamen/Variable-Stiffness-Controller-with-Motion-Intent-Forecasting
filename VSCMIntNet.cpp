@@ -1297,7 +1297,7 @@ int main(int argc, char** argv)
 
                       intentsum = ddot_filt*ddotdot_filt;
 
-                      if (((intentsum >= 0) && (flag_startest)) || useCircleFit || useLinearFit)
+                      if ((intentsum >= 0) && (flag_startest) && (useCircleFit || useLinearFit))
                       {
                           x_reserved.push_back(x_new(0));
                           y_reserved.push_back(x_new(2));
