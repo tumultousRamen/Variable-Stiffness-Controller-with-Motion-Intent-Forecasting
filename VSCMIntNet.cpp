@@ -90,6 +90,11 @@ int main(int argc, char** argv)
         printf("Subject: %d\n", subjectNumber);
     }
 
+    if(fitMethod < 0 || fitMethod > 3)
+    {
+        printf("Fitting method can be 1 -> Motion Intent Network 2 -> Circle Fitting 3 -> Linear Fitting\n");
+    }
+
     bool useMintNet = false;
     bool useCircleFit = false;
     bool useLinearFit = false;
@@ -139,14 +144,8 @@ int main(int argc, char** argv)
     	//read file
     	MatrixXd input(1, 12);
 
-    	const double DEFAULT_Blb_AP = -30.0;
-    	const double DEFAULT_Bub_AP = 60.0;
-    	const double DEFAULT_Blb_ML = -10.0;
-    	const double DEFAULT_Bub_ML = 60.0;
-    	MatrixXd b_LB(2, 1); b_LB << -30, -10;
-    	MatrixXd b_UB(2, 1); b_UB << 60, 60;
-
-
+    	MatrixXd b_LB(2, 1); b_LB << 10, 10;//-30, -10;
+    	MatrixXd b_UB(2, 1); b_UB << 10, 10;
 
     	bool useEmg = false;
     	bool kpInputted_ML = false;
@@ -165,10 +164,7 @@ int main(int argc, char** argv)
     	bool kubInputted = false;
 
     	// TCP variables
-    	bool bSendSignal = false;
-    	bool bWorkDone = false;
     	bool bStartSignal = false;
-    	bool bAllFinished = false;
     	bool bEndSignal = false;
     	bool Triggerofend = false;
 
@@ -179,131 +175,15 @@ int main(int argc, char** argv)
     	int flagconfig = 1;
 
 
-    	std::string argKey;
-    	std::string argVal;
-
-
-    for (int iArg=4; iArg<(argc-1); iArg+=2)
-	{
-		// get key and val
-		argKey = std::string(argv[iArg]);
-		argVal = std::string(argv[iArg+1]);
-		// set key uppercase
-		std::transform(argKey.begin(), argKey.end(), argKey.begin(), ::toupper);
-
-		if (argKey.compare("TN") == 0)
-		{
-			trialNumberInputted = true;
-			trialNum = std::stoi(argVal);
-		}
-		else if (argKey.compare("EMG") == 0)
-		{
-			useEmg = true;
-			emgIpAddr = argVal;
-		}
-		else if (argKey.compare("KPAP") == 0)
-		{
-			kpInputted_AP = true;
-			kp(0) = std::stod(argVal);
-		}
-		else if (argKey.compare("KNAP") == 0)
-		{
-			knInputted_AP = true;
-			kn(0) = std::stod(argVal);
-		}
-		else if (argKey.compare("KPML") == 0)
-		{
-			kpInputted_ML = true;
-			kp(1) = std::stod(argVal);
-		}
-		else if (argKey.compare("KNML") == 0)
-		{
-			knInputted_ML = true;
-			kn(1) = std::stod(argVal);
-		}
-		else if (argKey.compare("TUNE") == 0)
-		{
-			tuneInputted = true;
-		}
-		else if (argKey.compare("DEL") == 0)
-		{
-			deltaInputted = true;
-			delta = std::stod(argVal);
-		}
-		else if (argKey.compare("R") == 0)
-		{
-			rInputted = true;
-			r = std::stod(argVal);
-		}
-		else if (argKey.compare("BLBAP") == 0)
-		{
-			blbInputted_AP = true;
-			b_LB(0) = std::stod(argVal);
-		}
-		else if (argKey.compare("BUBAP") == 0)
-		{
-			bubInputted_AP = true;
-			b_UB(0) = std::stod(argVal);
-		}
-		else if (argKey.compare("BLBML") == 0)
-		{
-			blbInputted_ML = true;
-			b_LB(1) = std::stod(argVal);
-		}
-		else if (argKey.compare("BUBML") == 0)
-		{
-			bubInputted_ML = true;
-			b_UB(1) = std::stod(argVal);
-		}
-		else if (argKey.compare("KUB") == 0)
-		{
-			kubInputted = true;
-			k_UB = std::stod(argVal);
-		}
-		else if (argKey.compare("RHO") == 0)
-		{
-			rhoInputted = true;
-			rho_rate = std::stod(argVal);
-		}
-		else
-		{
-			printf("Key: %s not understood\n", argKey.c_str());
-		}
-	}
-
 	// Check kp and kn values
-    if (!kpInputted_ML)
-    {
-        kp(1) = DEFAULT_KP_ML;
-    }
-    if (!knInputted_ML)
-    {
-        kn(1) = DEFAULT_KN_ML;
-    }
-    if (!kpInputted_AP)
-    {
-        kp(0) = DEFAULT_KP_AP;
-    }
-    if (!knInputted_AP)
-    {
-        kn(0) = DEFAULT_KN_AP;
-    }
-    if (!deltaInputted)
-    {
-        delta = DEFAULT_DELTA;
-    }
-    if (!rInputted)
-    {
-        r = DEFAULT_R;
-    }
-    if (!kubInputted)
-    {
-        k_UB = DEFAULT_k_UB;
-    }
-    if (!rhoInputted)
-    {
-        rho_rate = DEFAULT_rho_rate;
-    }
+	kp(1) = DEFAULT_KP_ML;
+    kn(1) = DEFAULT_KN_ML;
+    kp(0) = DEFAULT_KP_AP;
+    kn(0) = DEFAULT_KN_AP;
+    delta = DEFAULT_DELTA;
+    r = DEFAULT_R;
+    k_UB = DEFAULT_k_UB;
+    rho_rate = DEFAULT_rho_rate;
 
     // Check Inputted Trial Number
     if (!trialNumberInputted)
@@ -311,26 +191,10 @@ int main(int argc, char** argv)
         trialNum = (int) DEFAULT_TRIALNUMBER;
     }
 
-    if (!blbInputted_AP)
-    {
-        b_LB(0) = DEFAULT_Blb_AP;
-    }
-
-    //check Inputted B_UB
-    if (!bubInputted_AP)
-    {
-        b_UB(0) = DEFAULT_Bub_AP;
-    }
-    if (!blbInputted_ML)
-    {
-        b_LB(1) = DEFAULT_Blb_ML;
-    }
-
-    //check Inputted B_UB
-    if (!bubInputted_ML)
-    {
-        b_UB(1) = DEFAULT_Bub_ML;
-    }
+    b_LB(0) = 10.0;
+    b_UB(0) = 10.0;
+    b_LB(1) = 10.0;
+    b_UB(1) = 10.0;
 
     // Check EMG use
     TrignoEmgClient emgClient;
@@ -564,7 +428,7 @@ int main(int argc, char** argv)
 
     // Variables related to variable dampings
     float dt = 0.001;
-    MatrixXd b_var(2, 1); b_var << 30, 30;					// Variable damping -- Won't be need this!
+    //MatrixXd b_var(2, 1); b_var << 10,10; //30, 30;					// Variable damping -- Won't be need this!
     MatrixXd b_cons(2, 1); b_cons << 10, 10;                // Should 10 suffice for constant damping?
     MatrixXd Bgroups(2, 1);
     const double DEFAULT_Damping = 10.0; //30.0;                    // Set to this b_cons value as well?
@@ -1578,29 +1442,9 @@ int main(int argc, char** argv)
 
                   }
 
-                // calculating variable damping
-                /*
-                if (xdot_filt(0)*xdotdot_filt(0) >= 0)
-                {
-                    b_var(0) = 10.0 //(2 * b_LB(0) / (1 + exp(-kp(0) * xdot_filt(0)*xdotdot_filt(0))) - b_LB(0));
 
-                }
-                else
-                {
-                    b_var(0) = 10.0 //-(2 * b_UB(0) / (1 + exp(-kn(0) * xdot_filt(0)*xdotdot_filt(0))) - b_UB(0));
-                }
-                if (xdot_filt(2)*xdotdot_filt(2) >= 0)
-                {
-                    b_var(1) = (2 * b_LB(1) / (1 + exp(-kp(1) * xdot_filt(2)*xdotdot_filt(2))) - b_LB(1));
-                }
-                else
-                {
-                    b_var(1) = -(2 * b_UB(1) / (1 + exp(-kn(1) * xdot_filt(2)*xdotdot_filt(2))) - b_UB(1));
-                }
-                */
-
-                b_var(0) = 10.0;
-                b_var(1) = 10.0;
+                //b_var(0) = 10.0;
+                //b_var(1) = 10.0;
 
                 if (endBlock)
                 {
