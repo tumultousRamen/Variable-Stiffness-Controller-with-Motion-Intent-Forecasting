@@ -1115,15 +1115,6 @@ int main(int argc, char** argv)
                                         {
                                             parameterfile >> input(0) >> input(1) >> input(2) >> input(3) >> input(4) >> input(5) >> input(6) >> input(7) >> input(8) >> input(9) >> input(10) >> input(11);
 
-                                            if (!blbInputted_AP)
-                                            {
-                                                b_LB(0) = 10.0 //input(0);
-                                            }
-                                            if (!bubInputted_AP)
-                                            {
-                                                b_UB(0) = 10.0 //input(1);
-                                            }
-
                                             if (!kpInputted_AP)
                                             {
                                                 kp(0) = input(2);
@@ -1132,15 +1123,6 @@ int main(int argc, char** argv)
                                             {
                                                 kn(0) = input(3);
                                             }
-                                            if (!blbInputted_ML)
-                                            {
-                                                b_LB(1) = 10.0 //input(4);
-                                            }
-                                            if (!bubInputted_ML)
-                                            {
-                                                b_UB(1) = 10.0 //input(5);
-                                            }
-
                                             if (!kpInputted_ML)
                                             {
                                                 kp(1) = input(6);
@@ -1170,11 +1152,6 @@ int main(int argc, char** argv)
                                         }
                                         if(blockNum <= numpriorblock)
                                         {
-                                          //b_LB(0) = blbprior(trialNum-1);
-                                          b_LB(0) = 10.0 //bpriorAP((blockNum-1)*2, (iterNum-1));
-                                          b_UB(0) = 10.0 //bpriorAP((blockNum)*2-1, (iterNum-1));
-                                          b_LB(1) = 10.0 //bpriorML((blockNum-1)*2, (iterNum-1));
-                                          b_UB(1) = 10.0 //bpriorML((blockNum)*2-1, (iterNum-1));
                                           rho_rate = rhoRprior(blockNum-1,iterNum-1);
                                           rho = rho_rate*0.01*20.0*sqrt(2.0);
                                           k_UB = KUBprior(blockNum-1,iterNum-1);
