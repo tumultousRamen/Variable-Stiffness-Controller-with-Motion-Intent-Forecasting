@@ -93,6 +93,7 @@ int main(int argc, char** argv)
     if(fitMethod < 0 || fitMethod > 3)
     {
         printf("Fitting method can be 1 -> Motion Intent Network 2 -> Circle Fitting 3 -> Linear Fitting\n");
+        exit(1);
     }
 
     bool useMintNet = false;
@@ -101,7 +102,7 @@ int main(int argc, char** argv)
 
     if(fitMethod == 1)
     {
-        // Add flag
+        // Toggle flag
         useMintNet = true;
     }
     else if(fitMethod == 2)
@@ -1273,7 +1274,7 @@ int main(int argc, char** argv)
                   {
 
                       intentsum = ddot_filt*ddotdot_filt;
-
+                      //if ((intentsum >= 0) && (flag_startest)) --> Should we, regardless of desired fitting method, compute the projections from circle and linear fitting?
                       if ((intentsum >= 0) && (flag_startest) && (useCircleFit || useLinearFit))
                       {
                           x_reserved.push_back(x_new(0));
@@ -1281,7 +1282,7 @@ int main(int argc, char** argv)
 
                           distAB = sqrt(pow(y_reserved[0]-y_reserved[y_reserved.size()-1],2)+pow(x_reserved[0]-x_reserved[x_reserved.size()-1],2));
 
-                          if ((distAB >= rho) && (firstest))
+                          if ((distAB >= rho) && (firstest)) // We could also add the condition on circle and linear flags here
                           {
 
                               // Linear................
