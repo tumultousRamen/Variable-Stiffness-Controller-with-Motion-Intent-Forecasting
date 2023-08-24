@@ -10,6 +10,8 @@
 #include "friUdpConnection.h"
 #include "friClientApplication.h"
 #include <time.h>
+#include <chrono>
+#include <thread>
 #include <sys/shm.h>
 #include <eigen3/Eigen/Dense>
 #include "UdpServer.h"
@@ -17,6 +19,7 @@
 #include <algorithm>
 #include <vector>
 #include "tcp_client.h"
+#include <deque>
 
 /* Boost filesystem */
 #include <boost/filesystem.hpp>
@@ -55,6 +58,10 @@ int main(int argc, char** argv)
 {
     // Circle object
     Circle circle
+
+    // Chrono time object: keeps track of elapsed time
+    std::chrono:steady_clock::time_point startTime = std::chrono::steady_clock::now();
+    std::chrono::milliseconds interval(5); // 5 milliseconds time interval
 
     // TCP Server initiation
     int check_routine_ms = 20; // every 20ms check routine
@@ -453,6 +460,12 @@ int main(int argc, char** argv)
     bool firstest = false;
     std::vector<double> y_reserved;
     std::vector<double> x_reserved;
+
+    // Variables related to Motion Intent Network
+    std::deque<Eigen::ArrayXXf> input_Mint;
+    int const threshold_MIntNet = 5;
+    int const input_seq_length = 125;
+
     MatrixXd k_var(2, 1); k_var << 0, 0;
     MatrixXd Kgroups(2, 1);
     MatrixXd xstart(2, 1), xend(2, 1), xcurrent(2, 1), bproj(2, 1), aproj(2, 1), amirror(2, 1), projected(2, 1), projected_lin(2, 1);
@@ -475,6 +488,9 @@ int main(int argc, char** argv)
     bool flag_counter = false;
     int counter_estimate = 0;
     int const estimate_threshold = 100;
+    int estimate_MIntNet = 0;
+
+
 
     // variables for intentsum
     double displacement = 0.0;
@@ -1272,6 +1288,24 @@ int main(int argc, char** argv)
                 //Estimating intent of direction & variable stiffness
                   if (startBlock)
                   {
+                      if(useMintNet)
+                      {
+                        steady_clock::time_point currentTime = steady_clock::now();
+                        //estimate_MIntNet++;
+                        std::chrono::milliseconds elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime);
+                        Eigen::Array<float, 4, 1> input_Array << xdot(0), xdot(2), xdotdot(0), xdotdot(2);
+                        input_Mint.push_back(input_Array);
+                        if(elapsedTime >= interval)
+                        {
+                            if(input_Array.size() >= 125)
+                            {
+                                // Mint Net Here!
+                                // Discuss the policy for maintaining the deque
+                                startTime = currentTime;
+                            }
+
+                        }
+                      }
 
                       intentsum = ddot_filt*ddotdot_filt;
                       //if ((intentsum >= 0) && (flag_startest)) --> Should we, regardless of desired fitting method, compute the projections from circle and linear fitting?
