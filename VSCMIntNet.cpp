@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     Circle circle
 
     // Chrono time object: keeps track of elapsed time
-    //std::chrono:steady_clock::time_point startTime = std::chrono::steady_clock::now();
+    std::chrono:steady_clock::time_point first_StartTime = std::chrono::steady_clock::now();
     std::chrono:steady_clock::time_point startTime;
     std::chrono::milliseconds interval(5); // 5 milliseconds time interval
 
@@ -1296,14 +1296,30 @@ int main(int argc, char** argv)
                         if(firstMIntFit)
                         {
                             startTime = std::chrono::steady_clock::now();
-                            if(input_Mint.size() < input_seq_length)
+                            std::chrono::milliseconds first_elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(starTime - first_StartTime);
+                            Eigen::Array<float, 4, 1> first_input_Array << xdot(0), xdot(2), xdotdot(0), xdotdot(2);
+                            if(input_Mint.size() < input_seq_length && first_elapsedTime < interval)
                             {
-                                Eigen::Array<float, 4, 1> input_Array << xdot(0), xdot(2), xdotdot(0), xdotdot(2);
-                                input_Mint.push_back(input_Array);
+                                input_Mint.push_back(first_input_Array);
                             }
                             else
                             {
-                                firstMIntFit = false;
+                                if(input_Mint.size() < input_seq_length)
+                                {
+                                    input_Mint.push_back(first_input_Array);
+                                }
+                                else if(elapsedTime < interval)
+                                {
+                                    while(input_Mint.size() >= input_seq_length)
+                                    {
+                                        input_Mint.pop_front();
+                                    }
+                                    input_Mint.push_back(first_input_Array);
+                                }
+                                else
+                                {
+                                    firstMIntFit = false;
+                                }
                             }
                         }
                         else
