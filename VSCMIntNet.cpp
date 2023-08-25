@@ -60,7 +60,8 @@ int main(int argc, char** argv)
     Circle circle
 
     // Chrono time object: keeps track of elapsed time
-    std::chrono:steady_clock::time_point startTime = std::chrono::steady_clock::now();
+    //std::chrono:steady_clock::time_point startTime = std::chrono::steady_clock::now();
+    std::chrono:steady_clock::time_point startTime;
     std::chrono::milliseconds interval(5); // 5 milliseconds time interval
 
     // TCP Server initiation
@@ -465,6 +466,7 @@ int main(int argc, char** argv)
     std::deque<Eigen::ArrayXXf> input_Mint;
     int const threshold_MIntNet = 5;
     int const input_seq_length = 125;
+    bool firstMIntFit = false;
 
     MatrixXd k_var(2, 1); k_var << 0, 0;
     MatrixXd Kgroups(2, 1);
@@ -1103,7 +1105,7 @@ int main(int argc, char** argv)
                                           trialsec = 1;
                                           flag_unitchange = 1;
                                         }
-
+                                        firstMIntFit = true;
                                         flag_startest = true;
                                         firstest = true;
                                         // I think they should be cleared here too (maybe with firstit)
@@ -1111,6 +1113,7 @@ int main(int argc, char** argv)
                                         x_reserved.clear();
                                         flag_var = false;
                                         flag_var2 = false;
+                                        input_Mint.clear();
 
                                         // Reading parameter file
 
@@ -1290,20 +1293,59 @@ int main(int argc, char** argv)
                   {
                       if(useMintNet)
                       {
-                        steady_clock::time_point currentTime = steady_clock::now();
-                        //estimate_MIntNet++;
-                        std::chrono::milliseconds elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime);
-                        Eigen::Array<float, 4, 1> input_Array << xdot(0), xdot(2), xdotdot(0), xdotdot(2);
-                        input_Mint.push_back(input_Array);
-                        if(elapsedTime >= interval)
+                        if(firstMIntFit)
                         {
-                            if(input_Array.size() >= 125)
+                            startTime = std::chrono::steady_clock::now();
+                            if(input_Mint.size() < input_seq_length)
                             {
-                                // Mint Net Here!
-                                // Discuss the policy for maintaining the deque
-                                startTime = currentTime;
+                                Eigen::Array<float, 4, 1> input_Array << xdot(0), xdot(2), xdotdot(0), xdotdot(2);
+                                input_Mint.push_back(input_Array);
                             }
-
+                            else
+                            {
+                                firstMIntFit = false;
+                            }
+                        }
+                        else
+                        {
+                            steady_clock::time_point currentTime = steady_clock::now();
+                            std::chrono::milliseconds elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime);
+                            Eigen::Array<float, 4, 1> input_Array << xdot(0), xdot(2), xdotdot(0), xdotdot(2);
+                            if(elapsedTime < interval)
+                            {
+                                if(input_Mint.size() < input_seq_length)
+                                {
+                                    input_Mint.push_back(input_Array);
+                                }
+                                else if(input_Mint.size() >= input_seq_length)
+                                {
+                                    while(input_Mint.size() >= input_seq_length)
+                                    {
+                                        input_Mint.pop_front();
+                                    }
+                                    input_Mint.push_back(input_Array);
+                                }
+                            }
+                            else
+                            {
+                                if(input_Mint.size() < input_seq_length)
+                                {
+                                    input_Mint.push_back(input_Array);
+                                }
+                                else if(input_Mint.size() > input_seq_length)
+                                {
+                                    while(input_Mint.size() >= input_seq_length)
+                                    {
+                                        input_Mint.pop_front();
+                                    }
+                                    input_Mint.push_back(input_Array);
+                                }
+                                else
+                                {
+                                    // Call MInt Net here
+                                    startTime = steady_clock::now();
+                                }
+                            }
                         }
                       }
 
