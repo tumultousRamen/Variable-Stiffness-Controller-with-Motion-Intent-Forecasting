@@ -20,6 +20,7 @@
 #include <vector>
 #include "tcp_client.h"
 #include <deque>
+#include "mintwrapper.h"
 
 /* Boost filesystem */
 #include <boost/filesystem.hpp>
@@ -33,6 +34,8 @@
 #include "circle.h"
 #include "circleutils.h"
 
+using json = nlohmann::json;
+using namespace torch::indexing;
 using namespace std;
 using namespace KUKA::FRI;
 using namespace Eigen;
@@ -472,6 +475,7 @@ int main(int argc, char** argv)
     MatrixXd Kgroups(2, 1);
     MatrixXd xstart(2, 1), xend(2, 1), xcurrent(2, 1), bproj(2, 1), aproj(2, 1), amirror(2, 1), projected(2, 1), projected_lin(2, 1);
     MatrixXd tempstiff(2, 1);
+    Eigen::ArrayXf mintnet_projections(2, 1);
 
     //Circle fitting
     std::vector<double> y_test {7.,6.,8.,7.,5.,7.};
@@ -1291,6 +1295,7 @@ int main(int argc, char** argv)
                 //Estimating intent of direction & variable stiffness
                   if (startBlock)
                   {
+                      intentsum = ddot_filt*ddotdot_filt;
                       if(useMintNet)
                       {
                         steady_clock::time_point currentTime = steady_clock::now();
@@ -1325,18 +1330,26 @@ int main(int argc, char** argv)
                                 }
                                 input_Mint.push_back(input_Array);
                                 // Can call Mint Here after updating the deque with latest values
+                                mintnet_projections = mintnet(model_path, hparams_path, input_Mint);
                                 startTime = steady_clock::now;
                             }
                             else
                             {
                                 // Call MInt Net here
+                                mintnet_projections = mintnet(model_path, hparams_path, input_Mint);
                                 startTime = steady_clock::now();
                             }
                         }
+                        xcurrent << x_new(0), x_new(2);
+                        x_e(0) = mintnet_projections(0);
+                        x_e(2) = mintnet_projections(1);
+                        angleproj = atan2(mintnet_projections(1)-xcurrent(1),mintnet_projections(0)-xcurrent(0));
 
+                        k_var(0) = abs((k_UB/(1 + exp(-r*intentsum + delta)))*cos(angleproj));
+                        k_var(1) = abs((k_UB/(1 + exp(-r*intentsum + delta)))*sin(angleproj));
                       }
 
-                      intentsum = ddot_filt*ddotdot_filt;
+
                       //if ((intentsum >= 0) && (flag_startest)) --> Should we, regardless of desired fitting method, compute the projections from circle and linear fitting?
                       if ((intentsum >= 0) && (flag_startest) && (useCircleFit || useLinearFit))
                       {
@@ -1458,12 +1471,6 @@ int main(int argc, char** argv)
                             x_e(2) = projected(1);
                             angleproj = atan2(projected(1)-xcurrent(1),projected(0)-xcurrent(0));
                           }
-                          else
-                          {
-                            // Projection from MIntNet
-
-
-                          }
 
                           k_var(0) = abs((k_UB/(1 + exp(-r*intentsum + delta)))*cos(angleproj));
                           k_var(1) = abs((k_UB/(1 + exp(-r*intentsum + delta)))*sin(angleproj));
@@ -1475,7 +1482,7 @@ int main(int argc, char** argv)
                           }
 
                       }
-                      else
+                      else if(!useMintNet)
                       {
                           k_var(0) = 0;
                           k_var(1) = 0;
@@ -1564,6 +1571,34 @@ int main(int argc, char** argv)
     tcp_client.End(); // TCP/IP
 
     return 1;
+}
+
+Eigen::ArrayXf mintnet(std::string modelPath, std::string hparams, Eigen::ArrayXXf input_a){
+    MIntWrapper minty(modelPath, hparams);
+    /*
+    std::ifstream f(hparams);
+    json data = json::parse(f);
+    json data_helper = data["helper_params"];
+    json data_model = data["mdl_params"];
+
+    const int input_chn_size = int(data_model["input_size"]);
+    const int output_chn_size = int(data_model["output_size"]);
+    const int input_seq_length = int(data_helper["input_sequence_length"]);
+    const int output_seq_length = int(data_model["M"]) * int(data_model["G"]);
+
+    double max_sim_time = 3.0;
+    double sample_rate = 0.005;
+    auto sim_timer_start = std::chrono::steady_clock::now();
+    auto sample_timer_start = std::chrono::steady_clock::now();
+
+    auto output_minty = minty.forward(input_a);
+
+    Eigen::ArrayXf current_state(6,1);
+    current_state << 0.1, 0.1, 0.1, 0.1, 0.1, 0.1;
+    minty.forwardFitSpline(current_state, input_a);
+    */
+    output_eq = minty.getEquilibriumPoint();
+    return output_eq;
 }
 
 void CreateOrOpenKukaDataFile(boost::filesystem::ofstream & ofs, path kukaDataFilePath)
