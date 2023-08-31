@@ -56,11 +56,17 @@ template<typename T>
 T * InitSharedMemory(std::string shmAddr, int nElements);
 void CreateOrOpenKukaDataFile(boost::filesystem::ofstream & ofs, path kukaDataFilePath);
 
+const std::string model_name = "traced_mintnet_epochs_10.pt";
+const std::string hparam_name = "hyper_params.json";
+
 // Main
 int main(int argc, char** argv)
 {
     // Circle object
-    Circle circle
+    Circle circle;
+
+    // Initialize MIntWrapper
+    MIntWrapper minty(model_name, hparam_name);
 
     // Chrono time object: keeps track of elapsed time
     //std::chrono:steady_clock::time_point first_StartTime;
@@ -475,6 +481,7 @@ int main(int argc, char** argv)
     MatrixXd Kgroups(2, 1);
     MatrixXd xstart(2, 1), xend(2, 1), xcurrent(2, 1), bproj(2, 1), aproj(2, 1), amirror(2, 1), projected(2, 1), projected_lin(2, 1);
     MatrixXd tempstiff(2, 1);
+    Eigen::ArrayXf mintnet_current_state(6,1);
     Eigen::ArrayXf mintnet_projections(2, 1);
 
     //Circle fitting
@@ -1298,6 +1305,7 @@ int main(int argc, char** argv)
                       intentsum = ddot_filt*ddotdot_filt;
                       if(useMintNet)
                       {
+                        mintnet_current_state << x_new(0), x_new(2), xdot(0), xdot(2), xdotdot(0), xdotdot(2);
                         steady_clock::time_point currentTime = steady_clock::now();
                         std::chrono::milliseconds elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime);
                         Eigen::Array<float, 4, 1> input_Array << xdot(0), xdot(2), xdotdot(0), xdotdot(2);
@@ -1330,16 +1338,18 @@ int main(int argc, char** argv)
                                 }
                                 input_Mint.push_back(input_Array);
                                 // Can call Mint Here after updating the deque with latest values
-                                mintnet_projections = mintnet(model_path, hparams_path, input_Mint);
+                                minty.forwardFitSpline(mintnet_current_state, input_Mint);
                                 startTime = steady_clock::now;
                             }
                             else
                             {
                                 // Call MInt Net here
-                                mintnet_projections = mintnet(model_path, hparams_path, input_Mint);
+                                minty.forwardFitSpline(mintnet_current_state, input_Mint);
                                 startTime = steady_clock::now();
                             }
                         }
+                        mintnet_projections = minty.getEquilibriumPoint();
+
                         xcurrent << x_new(0), x_new(2);
                         x_e(0) = mintnet_projections(0);
                         x_e(2) = mintnet_projections(1);
@@ -1573,9 +1583,10 @@ int main(int argc, char** argv)
     return 1;
 }
 
+/*
 Eigen::ArrayXf mintnet(std::string modelPath, std::string hparams, Eigen::ArrayXXf input_a){
     MIntWrapper minty(modelPath, hparams);
-    /*
+    
     std::ifstream f(hparams);
     json data = json::parse(f);
     json data_helper = data["helper_params"];
@@ -1596,10 +1607,11 @@ Eigen::ArrayXf mintnet(std::string modelPath, std::string hparams, Eigen::ArrayX
     Eigen::ArrayXf current_state(6,1);
     current_state << 0.1, 0.1, 0.1, 0.1, 0.1, 0.1;
     minty.forwardFitSpline(current_state, input_a);
-    */
+    
     output_eq = minty.getEquilibriumPoint();
     return output_eq;
 }
+*/
 
 void CreateOrOpenKukaDataFile(boost::filesystem::ofstream & ofs, path kukaDataFilePath)
 {
